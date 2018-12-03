@@ -1,0 +1,2 @@
+# maze
+Rikor test task
