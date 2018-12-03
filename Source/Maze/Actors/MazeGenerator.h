@@ -12,8 +12,15 @@ class MAZE_API AMazeGenerator : public AActor
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
+
 	AMazeGenerator();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Settings", meta = (ClampMin = "2", UIMin = "2"))
+		int32 Width;
+	UPROPERTY(EditDefaultsOnly, Category = "Settings", meta = (ClampMin = "2", UIMin = "2"))
+		int32 Height;
+	UPROPERTY(EditDefaultsOnly, Category = "Settings", meta = (ClampMin = "0.0", UIMin = "0.0"))
+		float Step;
 
 protected:
 	// Called when the game starts or when spawned
