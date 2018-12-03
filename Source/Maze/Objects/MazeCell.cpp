@@ -2,3 +2,7 @@
 
 #include "MazeCell.h"
 
+UMazeCell::UMazeCell(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
+{
+
+}

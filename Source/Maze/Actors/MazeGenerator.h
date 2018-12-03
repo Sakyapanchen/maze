@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Objects/MazeCell.h"
+#include "Runtime/Engine/Classes/Components/InstancedStaticMeshComponent.h"
 #include "MazeGenerator.generated.h"
 
 UCLASS()
@@ -13,7 +15,7 @@ class MAZE_API AMazeGenerator : public AActor
 	
 public:	
 
-	AMazeGenerator();
+	AMazeGenerator(const FObjectInitializer& ObjectInitializer);
 
 	UPROPERTY(EditDefaultsOnly, Category = "Settings", meta = (ClampMin = "2", UIMin = "2"))
 		int32 Width;
@@ -21,6 +23,8 @@ public:
 		int32 Height;
 	UPROPERTY(EditDefaultsOnly, Category = "Settings", meta = (ClampMin = "0.0", UIMin = "0.0"))
 		float Step;
+	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator")
+		TArray<UMazeCell *> MazeCells;
 
 protected:
 	// Called when the game starts or when spawned
@@ -29,5 +33,14 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	UFUNCTION(BlueprintCallable, CallInEditor, Category = "Maze Generator")
+		void GenerateMaze(bool & success);
+
+private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Maze Generator",  meta = (AllowPrivateAccess = "true"))
+		UInstancedStaticMeshComponent* MazeWallCellMesh;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Maze Generator", meta = (AllowPrivateAccess = "true"))
+		USceneComponent* Root;
 
 };
