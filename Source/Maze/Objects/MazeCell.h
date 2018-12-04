@@ -9,6 +9,16 @@
 /**
  * 
  */
+UENUM(BlueprintType)
+enum class ENeighborCellPosition : uint8
+{
+	NPE_Up		UMETA(DisplayName = "Up"),
+	NPE_Down 	UMETA(DisplayName = "Down"),
+	NPE_Right	UMETA(DisplayName = "Right"),
+	NPE_Left	UMETA(DisplayName = "Left"),
+};
+
+
 UCLASS()
 class MAZE_API UMazeCell : public UObject
 {
@@ -23,7 +33,11 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator|Cell")
 		bool bIsVisited = false;
 	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator|Cell")
+		int32 j;
+	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator|Cell")
+		int32 i;
+	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator|Cell")
 		FVector Location;
 	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator|Cell")
-		TArray<UMazeCell *>NeighboringCells;
+		TMap<ENeighborCellPosition, UMazeCell *>NeighboringCells;
 };

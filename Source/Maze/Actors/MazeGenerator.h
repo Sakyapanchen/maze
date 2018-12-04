@@ -8,6 +8,14 @@
 #include "Runtime/Engine/Classes/Components/InstancedStaticMeshComponent.h"
 #include "MazeGenerator.generated.h"
 
+USTRUCT(BlueprintType)
+struct FCellsRow
+{
+	GENERATED_USTRUCT_BODY();
+	TArray<UMazeCell*> Cells;
+};
+
+
 UCLASS()
 class MAZE_API AMazeGenerator : public AActor
 {
@@ -24,7 +32,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Settings", meta = (ClampMin = "0.0", UIMin = "0.0"))
 		float Step;
 	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator")
-		TArray<UMazeCell *> MazeCells;
+		TArray<FCellsRow> MazeCellRows;
 
 protected:
 	// Called when the game starts or when spawned
@@ -38,6 +46,10 @@ public:
 		void GenerateMaze(bool & success);
 
 private:
+
+	UFUNCTION(CallInEditor, Category = "Maze Generator")
+		void GenerateSourceMatrix(bool & success);
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Maze Generator",  meta = (AllowPrivateAccess = "true"))
 		UInstancedStaticMeshComponent* MazeWallCellMesh;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Maze Generator", meta = (AllowPrivateAccess = "true"))
