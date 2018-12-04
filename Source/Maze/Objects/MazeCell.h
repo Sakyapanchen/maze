@@ -37,7 +37,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator|Cell")
 		int32 i;
 	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator|Cell")
-		FVector Location;
-	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator|Cell")
 		TMap<ENeighborCellPosition, UMazeCell *>NeighboringCells;
+	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator|Cell")
+		TMap<ENeighborCellPosition, UMazeCell *>NeighboringWalls;
 };

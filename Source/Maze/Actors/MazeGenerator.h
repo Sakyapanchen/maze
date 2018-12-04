@@ -12,6 +12,8 @@ USTRUCT(BlueprintType)
 struct FCellsRow
 {
 	GENERATED_USTRUCT_BODY();
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	TArray<UMazeCell*> Cells;
 };
 
@@ -25,14 +27,19 @@ public:
 
 	AMazeGenerator(const FObjectInitializer& ObjectInitializer);
 
-	UPROPERTY(EditDefaultsOnly, Category = "Settings", meta = (ClampMin = "2", UIMin = "2"))
-		int32 Width;
-	UPROPERTY(EditDefaultsOnly, Category = "Settings", meta = (ClampMin = "2", UIMin = "2"))
-		int32 Height;
+	UPROPERTY(EditAnywhere, Category = "Settings", meta = (DisplayName = "Width", ClampMin = "2", UIMin = "2"))
+		int32 PassWidth = 2;
+	UPROPERTY(EditAnywhere, Category = "Settings", meta = (DisplayName = "Height", ClampMin = "2", UIMin = "2"))
+		int32 PassHeight = 2;
 	UPROPERTY(EditDefaultsOnly, Category = "Settings", meta = (ClampMin = "0.0", UIMin = "0.0"))
 		float Step;
 	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator")
 		TArray<FCellsRow> MazeCellRows;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator")
+		int32 Width = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator")
+		int32 Height = 0;
 
 protected:
 	// Called when the game starts or when spawned
