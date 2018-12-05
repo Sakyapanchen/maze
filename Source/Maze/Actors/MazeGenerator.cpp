@@ -13,6 +13,8 @@ AMazeGenerator::AMazeGenerator(const FObjectInitializer& ObjectInitializer)	: Su
 	RootComponent = Root;
 	MazeWallCellMesh = CreateDefaultSubobject<UInstancedStaticMeshComponent>("Maze Wall Cell Mesh");
 	MazeWallCellMesh->SetupAttachment(RootComponent);
+	MazeFloorCellMesh = CreateDefaultSubobject<UInstancedStaticMeshComponent>("Maze Floor Cell Mesh");
+	MazeFloorCellMesh->SetupAttachment(RootComponent);
 }
 
 // Called when the game starts or when spawned
@@ -39,18 +41,18 @@ void AMazeGenerator::GenerateMaze(bool & success)
 	UMazeCell* CurrentCell = nullptr;
 	TArray<UMazeCell*> LastCellStack;
 
-	int32 VisitedEmptyCells = PassHeight * PassWidth;
-
 	GenerateSourceMatrix(success);
+	CreatePass();
 
-	int32 i = 1;
-	int32 j = 1;
+	int32 Row = 1;
+	int32 Column = 1;
 
 	MazeWallCellMesh->ClearInstances();
+	MazeFloorCellMesh->ClearInstances();
 
-	if (MazeCellRows.IsValidIndex(i))
-		if (MazeCellRows[i].Cells.IsValidIndex(j))
-			StartCell = MazeCellRows[i].Cells[j];
+	if (MazeCellRows.IsValidIndex(Row))
+		if (MazeCellRows[Row].Cells.IsValidIndex(Column))
+			StartCell = MazeCellRows[Row].Cells[Column];
 		else
 		{
 			success = false;
@@ -61,63 +63,58 @@ void AMazeGenerator::GenerateMaze(bool & success)
 		success = false;
 		return;
 	}
+
 	CurrentCell = StartCell;
 
-	while (VisitedEmptyCells > 0)
+	do
 	{
-		CurrentCell->bIsEmpty = true;
 		CurrentCell->bIsVisited = true;
+		TArray<UMazeCell*> UnvisitedNeighbors;
+		CurrentCell->GetUnvisitedNeighbors(UnvisitedNeighbors);
 
-		VisitedEmptyCells--;
-
-		if (CurrentCell->NeighboringCells.Num() > 0)
+		if (UnvisitedNeighbors.Num() > 0)
 		{
-			int32 RandIndex = FMath::RandRange(0, CurrentCell->NeighboringCells.Num() - 1);
+			int32 RandIndex = FMath::RandRange(0, UnvisitedNeighbors.Num() - 1);
+			UMazeCell * NeighborCell = UnvisitedNeighbors[RandIndex];
+			NeighborCell->bIsVisited = true;
 
-			TArray<ENeighborCellPosition> Keys;
+			RemoveWall(CurrentCell, NeighborCell);
 
-			Keys.Empty();
-			CurrentCell->NeighboringCells.GenerateKeyArray(Keys);
-			UMazeCell * NeighborCell = *CurrentCell->NeighboringCells.Find(Keys[RandIndex]);
-			CurrentCell->NeighboringCells.Remove(Keys[RandIndex]);
-
-			Keys.Empty();
-			CurrentCell->NeighboringWalls.GenerateKeyArray(Keys);
-			UMazeCell * NeighborWall = *CurrentCell->NeighboringWalls.Find(Keys[RandIndex]);
-			CurrentCell->NeighboringWalls.Remove(Keys[RandIndex]);
-
-			if (CurrentCell->NeighboringCells.Num() > 0)
+			if (UnvisitedNeighbors.Num() > 1)
 				LastCellStack.AddUnique(CurrentCell);
-			NeighborWall->bIsEmpty = true;
-			NeighborWall->bIsVisited = true;
+
 			CurrentCell = NeighborCell;
 		}
 		else
 		{
 			if (LastCellStack.Num() > 0)
 			{
-				int32 LastIndex = LastCellStack.Num() - 1;
 				CurrentCell = LastCellStack.Last();
 				LastCellStack.Remove(CurrentCell);
 			}
 		}
 	}
+	while (LastCellStack.Num() > 0);
 
 	for (FCellsRow CurrentRow : MazeCellRows)
 	{
 		for (UMazeCell * CurrentCell : CurrentRow.Cells)
 		{
+			FVector Location = FVector(CurrentCell->Column * Step, CurrentCell->Row * Step, 0.f);
+			FTransform Transform = FTransform(Location);
+			MazeFloorCellMesh->AddInstance(Transform);
+
 			if(!CurrentCell->bIsEmpty)
 			{
-				FVector Location = FVector(CurrentCell->j * Step, CurrentCell->i * Step, 0.f);
-				FTransform Transform = FTransform(Location);
 				MazeWallCellMesh->AddInstance(Transform);
 			}
+			CurrentCell->ConditionalBeginDestroy();
+			CurrentCell = nullptr;
 		}
 	}	
-		//NeighboringCells.GRandRange(0, NeighboringCells.Num() - 1)
-	//CurrentCell->NeighboringCells.Num
-	//CurrentCell->ConditionalBeginDestroy();
+	MazeCellRows.Empty();
+	this->GetWorld()->ForceGarbageCollection(true);
+	OnMazeGenerationEnd.Broadcast();
 }
 
 void AMazeGenerator::GenerateSourceMatrix(bool & success)
@@ -126,62 +123,84 @@ void AMazeGenerator::GenerateSourceMatrix(bool & success)
 	MazeCellRows.Empty();
 
 	UMazeCell* CurrentCell = nullptr;
-	for (int32 i = 0; i < Height; i++)
+	for (int32 Row = 0; Row < Height; Row++)
 	{
 		MazeCellRows.Add(FCellsRow());
 
-		for (int32 j = 0; j < Width; j++)
+		for (int32 Column = 0; Column < Width; Column++)
 		{
 			CurrentCell = NewObject<UMazeCell>(UMazeCell::StaticClass());
 
 			if (CurrentCell != nullptr)
 			{
-				CurrentCell->j = j;
-				CurrentCell->i = i;
+				CurrentCell->Column = Column;
+				CurrentCell->Row = Row;
 			}
 			else
 			{
 				success = false;
 				return;
 			}
-			if ((i % 2 != 0 && j % 2 != 0) && (i < Height - 1 && j < Width - 1))
+			if ((Row % 2 != 0 && Column % 2 != 0) && (Row < Height - 1 && Column < Width - 1))
 				CurrentCell->bIsEmpty = true;
 
-			for (int32 Itr = 1; Itr < 3; Itr++)
-			{
-				if (Itr == 1)
+			int32 CellStep = 2;
+
+			if (MazeCellRows.IsValidIndex(Row))
+				if (MazeCellRows[Row].Cells.IsValidIndex(Column - CellStep))
 				{
-					if (MazeCellRows.IsValidIndex(i))
-						if (MazeCellRows[i].Cells.IsValidIndex(j - Itr))
-						{
-							CurrentCell->NeighboringWalls.Add(ENeighborCellPosition::NPE_Left, MazeCellRows[i].Cells[j - Itr]);
-							MazeCellRows[i].Cells[j - Itr]->NeighboringWalls.Add(ENeighborCellPosition::NPE_Right, CurrentCell);
-						}
-					if (MazeCellRows.IsValidIndex(i - Itr))
-						if (MazeCellRows[i - Itr].Cells.IsValidIndex(j))
-						{
-							CurrentCell->NeighboringWalls.Add(ENeighborCellPosition::NPE_Down, MazeCellRows[i - Itr].Cells[j]);
-							MazeCellRows[i - Itr].Cells[j]->NeighboringWalls.Add(ENeighborCellPosition::NPE_Up, CurrentCell);
-						}
+					CurrentCell->NeighboringCells.Add(MazeCellRows[Row].Cells[Column - CellStep]);
+					MazeCellRows[Row].Cells[Column - CellStep]->NeighboringCells.Add(CurrentCell);
 				}
-				else
+			if (MazeCellRows.IsValidIndex(Row - CellStep))
+				if (MazeCellRows[Row - CellStep].Cells.IsValidIndex(Column))
 				{
-					if (MazeCellRows.IsValidIndex(i))
-						if (MazeCellRows[i].Cells.IsValidIndex(j - Itr))
-						{
-							CurrentCell->NeighboringCells.Add(ENeighborCellPosition::NPE_Left, MazeCellRows[i].Cells[j - Itr]);
-							MazeCellRows[i].Cells[j - Itr]->NeighboringCells.Add(ENeighborCellPosition::NPE_Right, CurrentCell);
-						}
-					if (MazeCellRows.IsValidIndex(i - Itr))
-						if (MazeCellRows[i - Itr].Cells.IsValidIndex(j))
-						{
-							CurrentCell->NeighboringCells.Add(ENeighborCellPosition::NPE_Down, MazeCellRows[i - Itr].Cells[j]);
-							MazeCellRows[i - Itr].Cells[j]->NeighboringCells.Add(ENeighborCellPosition::NPE_Up, CurrentCell);
-						}
+					CurrentCell->NeighboringCells.Add(MazeCellRows[Row - CellStep].Cells[Column]);
+					MazeCellRows[Row - CellStep].Cells[Column]->NeighboringCells.Add(CurrentCell);
 				}
-			}
-			MazeCellRows[i].Cells.Add(CurrentCell);
+			MazeCellRows[Row].Cells.Add(CurrentCell);
 		}	
+	}
+}
+
+void AMazeGenerator::RemoveWall(UMazeCell * CurrentCell, UMazeCell * NextCell)
+{
+	int32 WallRow = CurrentCell->Row;
+	int32 WallColumn = CurrentCell->Column;
+
+	if (CurrentCell->Row != NextCell->Row)
+		WallRow = CurrentCell->Row < NextCell->Row ? CurrentCell->Row + 1 : NextCell->Row + 1;
+	if (CurrentCell->Column != NextCell->Column)
+		WallColumn = CurrentCell->Column < NextCell->Column ? CurrentCell->Column + 1 : NextCell->Column + 1;
+
+	MazeCellRows[WallRow].Cells[WallColumn]->bIsEmpty = true;
+	MazeCellRows[WallRow].Cells[WallColumn]->bIsVisited = true;
+}
+
+void AMazeGenerator::CreatePass()
+{
+	int32 EnterRow = -1;
+	int32 EnterColumn = -1;
+	int32 ExitRow = -1;
+	int32 ExitColumn = -1;
+	if (FMath::RandBool())
+	{
+		EnterRow = 0;
+		EnterColumn = FMath::RandRange(1, PassWidth) * 2 - 1;
+		ExitRow = Height - 1;
+		ExitColumn = FMath::RandRange(1, PassWidth) * 2 - 1;
+	}
+	else
+	{
+		EnterRow = FMath::RandRange(1, PassHeight) * 2 - 1;
+		EnterColumn = 0;
+		ExitRow = FMath::RandRange(1, PassHeight) * 2 - 1;
+		ExitColumn = Width - 1;
+	}
+	if (MazeCellRows.Num() > 0)
+	{
+		MazeCellRows[EnterRow].Cells[EnterColumn]->bIsEmpty = true;
+		MazeCellRows[ExitRow].Cells[ExitColumn]->bIsEmpty = true;
 	}
 }
 

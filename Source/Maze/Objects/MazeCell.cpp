@@ -6,3 +6,13 @@ UMazeCell::UMazeCell(const FObjectInitializer& ObjectInitializer) : Super(Object
 {
 
 }
+
+
+void UMazeCell::GetUnvisitedNeighbors(TArray < UMazeCell *> & UnvisitedNeighbors)
+{
+	for (auto CurrentCell : NeighboringCells)
+	{
+		if(!CurrentCell->bIsVisited)
+			UnvisitedNeighbors.Add(CurrentCell);
+	}
+}

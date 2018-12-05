@@ -28,16 +28,18 @@ public:
 
 	UMazeCell(const FObjectInitializer& ObjectInitializer);
 
+	UFUNCTION(BlueprintCallable)
+		void GetUnvisitedNeighbors(TArray < UMazeCell *> & UnvisitedNeighbors);
+
+
 	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator|Cell")
 		bool bIsEmpty = false;
 	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator|Cell")
 		bool bIsVisited = false;
 	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator|Cell")
-		int32 j;
+		int32 Row;
 	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator|Cell")
-		int32 i;
+		int32 Column;
 	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator|Cell")
-		TMap<ENeighborCellPosition, UMazeCell *>NeighboringCells;
-	UPROPERTY(BlueprintReadOnly, Category = "Maze Generator|Cell")
-		TMap<ENeighborCellPosition, UMazeCell *>NeighboringWalls;
+		TArray<UMazeCell *>NeighboringCells;
 };
