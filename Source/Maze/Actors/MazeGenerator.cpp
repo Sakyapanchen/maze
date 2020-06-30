@@ -1,6 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "MazeGenerator.h"
+
+#include "Engine/Engine.h"
 #include "Runtime/Core/Public/Math/UnrealMathUtility.h"
 
 // Sets default values
@@ -98,22 +100,22 @@ void AMazeGenerator::GenerateMaze(bool & success)
 
 	for (FCellsRow CurrentRow : MazeCellRows)
 	{
-		for (UMazeCell * CurrentCell : CurrentRow.Cells)
+		for (UMazeCell * ItrCell : CurrentRow.Cells)
 		{
-			FVector Location = FVector(CurrentCell->Column * Step, CurrentCell->Row * Step, 0.f);
+			FVector Location = FVector(ItrCell->Column * Step, ItrCell->Row * Step, 0.f);
 			FTransform Transform = FTransform(Location);
 			MazeFloorCellMesh->AddInstance(Transform);
 
-			if(!CurrentCell->bIsEmpty)
+			if(!ItrCell->bIsEmpty)
 			{
 				MazeWallCellMesh->AddInstance(Transform);
 			}
-			CurrentCell->ConditionalBeginDestroy();
-			CurrentCell = nullptr;
+			ItrCell->ConditionalBeginDestroy();
+			ItrCell = nullptr;
 		}
 	}	
 	MazeCellRows.Empty();
-	this->GetWorld()->ForceGarbageCollection(true);
+	GEngine->ForceGarbageCollection(true);
 	OnMazeGenerationEnd.Broadcast();
 }
 
